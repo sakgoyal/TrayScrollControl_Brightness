@@ -19,27 +19,22 @@ fn main() {
 
     let hInstance = unsafe { GetModuleHandleW(std::ptr::null()) };
 
-	let mut wndclass = WNDCLASSEXW::default();
-	wndclass.cbSize = std::mem::size_of::<WNDCLASSEXW>() as u32;
-	wndclass.lpszClassName = class_name;
-	wndclass.lpfnWndProc = Some(DefWindowProcW);
-	wndclass.hInstance = hInstance;
+    let wndclass = WNDCLASSW {
+        lpfnWndProc: Some(WndProc),
+        hInstance: hInstance,
+        lpszClassName: class_name,
+        ..Default::default()
+    };
 
 
-	let result = unsafe { RegisterClassExW(&wndclass) };
-	if result == 0 {
-		panic!("Failed to register window class: {:?}", unsafe { GetLastError() });
-	}
+	let result = unsafe { RegisterClassW(&wndclass) };
+    assert!(result != 0, "Failed to register window class: {:?}", unsafe { GetLastError() });
 
-	let hwnd = unsafe { CreateWindowExW(0, class_name, std::ptr::null(), 0, 0, 0, 0, 0, std::ptr::null_mut(), std::ptr::null_mut(), hInstance, std::ptr::null()) };
-	if hwnd.is_null() {
-		panic!("Failed to create window: {:?}", unsafe { GetLastError() });
-	}
+	let hwnd: HWND = unsafe { CreateWindowExW(0, class_name, std::ptr::null_mut(), 0, 0, 0, 0, 0, std::ptr::null_mut(), std::ptr::null_mut(), hInstance, std::ptr::null_mut()) };
+    assert!(hwnd != std::ptr::null_mut(), "Failed to create window: {:?}", unsafe { GetLastError() });
 
 	let icon_handle = unsafe { LoadIconW(std::ptr::null_mut(), IDI_APPLICATION) };
-	if icon_handle.is_null() {
-		panic!("Failed to load icon: {:?}", unsafe { GetLastError() });
-	}
+    assert!(!icon_handle.is_null(), "Failed to load icon: {:?}", unsafe { GetLastError() });
 
 	unsafe {
 		NID.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
@@ -79,10 +74,10 @@ fn convert_string_to_wide(s: &'static str) -> [u16; 128] {
 	return wide;
 }
 
-unsafe fn WndProc(hWnd: HWND, message: u32, wParam: WPARAM, lParam: LPARAM) -> LRESULT {
-	// CheckIfCursorIsInTrayIconBounds(hWnd);
+unsafe extern "system" fn WndProc(hWnd: HWND, message: u32, wParam: WPARAM, lParam: LPARAM) -> LRESULT {
+	CheckIfCursorIsInTrayIconBounds(hWnd);
 
-    unsafe { DefWindowProcW(hWnd, message, wParam, lParam) };
+    return unsafe { DefWindowProcW(hWnd, message, wParam, lParam) };
 
 	// match message {
 	// 	WM_INPUT => {
@@ -103,32 +98,33 @@ unsafe fn WndProc(hWnd: HWND, message: u32, wParam: WPARAM, lParam: LPARAM) -> L
 	// 		unsafe { DefWindowProcW(hWnd, message, wParam, lParam) };
 	// 	}
 	// }
-	return 0;
+	// return 0;
 }
 
 fn CheckIfCursorIsInTrayIconBounds(hWnd: HWND) -> bool {
-    let niid = NOTIFYICONIDENTIFIER {
-        cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as u32,
-        hWnd: unsafe { NID.hWnd },
-        uID: unsafe { NID.uID },
-        guidItem: unsafe { core::mem::zeroed() },
-    };
+    return true;
+    // let niid = NOTIFYICONIDENTIFIER {
+    //     cbSize: std::mem::size_of::<NOTIFYICONIDENTIFIER>() as u32,
+    //     hWnd: unsafe { NID.hWnd },
+    //     uID: unsafe { NID.uID },
+    //     guidItem: unsafe { core::mem::zeroed() },
+    // };
 
-    let mut ptCursor: POINT = POINT::default();
-    let mut rcIcon: RECT = RECT::default();
-    if unsafe { GetCursorPos(&mut ptCursor) } != 0 &&
-       unsafe { Shell_NotifyIconGetRect(&niid, &mut rcIcon) != 0 } &&
-       unsafe { PtInRect(&rcIcon, ptCursor) } != 0 {
-        print!("Cursor is within tray icon bounds.\n");
-        // Cursor is in tray icon bounds
-        // Register for raw input if not already registered
-        return true;
-    } else {
-        // Cursor is outside tray icon bounds
-        // Unregister raw input if registered
-        print!("Cursor is outside tray icon bounds.\n");
-        return false;
-    }
+    // let mut ptCursor: POINT = POINT::default();
+    // let mut rcIcon: RECT = RECT::default();
+    // if unsafe { GetCursorPos(&mut ptCursor) } != 0 &&
+    //    unsafe { Shell_NotifyIconGetRect(&niid, &mut rcIcon) != 0 } &&
+    //    unsafe { PtInRect(&rcIcon, ptCursor) } != 0 {
+    //     print!("Cursor is within tray icon bounds.\n");
+    //     // Cursor is in tray icon bounds
+    //     // Register for raw input if not already registered
+    //     return true;
+    // } else {
+    //     // Cursor is outside tray icon bounds
+    //     // Unregister raw input if registered
+    //     print!("Cursor is outside tray icon bounds.\n");
+    //     return false;
+    // }
 
 }
 
