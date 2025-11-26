@@ -3,3 +3,8 @@ obj/
 *.exe
 .clangd
 .clang-format
+
+
+# Added by cargo
+
+/target
