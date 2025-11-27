@@ -1,15 +1,14 @@
 #![allow(nonstandard_style)]
 #![allow(unused)]
 #![allow(unreachable_code)]
-
+use brightness::blocking::{Brightness, BrightnessDevice};
 use windows_sys::{
 	Win32::{
 		Devices::HumanInterfaceDevice::{HID_USAGE_GENERIC_MOUSE, HID_USAGE_PAGE_GENERIC},
 		Foundation::*,
-		Graphics::Gdi::PtInRect,
+		Graphics::Gdi::*,
 		System::LibraryLoader::GetModuleHandleW,
-		UI::Input::*,
-		UI::{Shell::*, WindowsAndMessaging::*},
+		UI::{Input::*, Shell::*, WindowsAndMessaging::*},
 	},
 	core::*,
 };
@@ -17,8 +16,14 @@ use windows_sys::{
 const WM_TRAYICON: u32 = WM_USER + 1;
 static mut NID: NOTIFYICONDATAW = unsafe { core::mem::zeroed() };
 static mut bIsListeningInput: bool = false;
+static mut currentBrightness: u32 = 0;
 
 fn main() {
+	let mut hMon: HMONITOR = unsafe { MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST) };
+	if hMon.is_null() {
+		panic!("Failed to get monitor handle");
+	}
+
 	let class_name = w!("TRAYICONSCROLL");
 
 	let hInstance = unsafe { GetModuleHandleW(std::ptr::null()) };
@@ -56,12 +61,11 @@ fn main() {
 
 	let mut msg = MSG::default();
 	unsafe {
-		while GetMessageW(&mut msg, hwnd, 0, 0) != 0 {
+		while GetMessageW(&mut msg, hwnd, 0, 0) > 0 {
 			TranslateMessage(&msg);
 			DispatchMessageW(&msg);
 		}
 	}
-	std::process::exit(msg.wParam as i32);
 }
 
 fn convert_string_to_wide(s: &'static str) -> [u16; 128] {
@@ -79,29 +83,47 @@ fn convert_string_to_wide(s: &'static str) -> [u16; 128] {
 
 unsafe extern "system" fn WndProc(hWnd: HWND, message: u32, wParam: WPARAM, lParam: LPARAM) -> LRESULT {
 	CheckIfCursorIsInTrayIconBounds(hWnd);
-
-	return unsafe { DefWindowProcW(hWnd, message, wParam, lParam) };
-
-	// match message {
-	// 	WM_INPUT => {
-	// 		// Handle raw input for mouse wheel
-	//         let mut dwSize: u32 = std::mem::size_of::<RAWINPUT>() as u32;
-	//         let mut raw = RAWINPUT::default();
-	// 	}
-	// 	WM_TRAYICON => {
-	// 		if lParam == WM_RBUTTONUP.try_into().unwrap() {
-	// 			unsafe { ShowTrayMenu(hWnd) };
-	// 		}
-	// 	}
-	// 	WM_DESTROY => {
-	// 		unsafe { Shell_NotifyIconW(NIM_DELETE, &raw const NID) };
-	// 		unsafe { PostQuitMessage(0) };
-	// 	}
-	// 	_ => {
-	// 		unsafe { DefWindowProcW(hWnd, message, wParam, lParam) };
-	// 	}
-	// }
-	// return 0;
+	return match message {
+		WM_INPUT => {
+			// Handle raw input for mouse wheel
+			let mut dwSize: u32 = std::mem::size_of::<RAWINPUT>() as u32;
+			let mut raw = RAWINPUT::default();
+			if (unsafe { GetRawInputData(lParam as HRAWINPUT, RID_INPUT, &mut raw as *mut _ as *mut std::ffi::c_void, &mut dwSize, std::mem::size_of::<RAWINPUTHEADER>() as u32) } == dwSize) {
+				if (raw.header.dwType == RIM_TYPEMOUSE) {
+					let flags = unsafe { raw.data.mouse.Anonymous.Anonymous.usButtonFlags };
+					if (u32::from(flags) == RI_MOUSE_WHEEL) {
+						let delta: i16 = unsafe { raw.data.mouse.Anonymous.Anonymous.usButtonData as i16 } / 120;
+						println!("Raw wheel: delta={}, currentBright ", delta);
+						unsafe {
+							if delta > 0 {
+								currentBrightness += 5;
+							} else {
+								if currentBrightness >= 5 {
+								currentBrightness -= 5;}
+							}
+							currentBrightness = currentBrightness.clamp(0, 100);
+							run(currentBrightness);
+						}
+					}
+				}
+			}
+			return 0;
+		}
+		WM_TRAYICON => {
+			if lParam == WM_RBUTTONUP.try_into().unwrap() {
+				return ShowTrayMenu(hWnd);
+			}
+			return 0;
+		}
+		WM_DESTROY => {
+			unsafe { Shell_NotifyIconW(NIM_DELETE, &raw const NID) };
+			unsafe { PostQuitMessage(0) };
+			return 0;
+		}
+		_ => {
+			return unsafe { DefWindowProcW(hWnd, message, wParam, lParam) };
+		}
+	};
 }
 
 fn CheckIfCursorIsInTrayIconBounds(hWnd: HWND) -> bool {
@@ -126,34 +148,37 @@ fn CheckIfCursorIsInTrayIconBounds(hWnd: HWND) -> bool {
 				dwFlags: RIDEV_INPUTSINK,
 				hwndTarget: hWnd,
 			};
-            let reg_result = unsafe { RegisterRawInputDevices(&rid, 1, std::mem::size_of::<RAWINPUTDEVICE>() as u32) };
-            if reg_result != 0 {
-                unsafe { bIsListeningInput = true; }
-            }
+			let reg_result = unsafe { RegisterRawInputDevices(&rid, 1, std::mem::size_of::<RAWINPUTDEVICE>() as u32) };
+			if reg_result != 0 {
+				unsafe {
+					bIsListeningInput = true;
+				}
+			}
 		}
 		return true;
 	} else {
 		if (unsafe { bIsListeningInput }) {
-            let rid = RAWINPUTDEVICE {
-                usUsagePage: HID_USAGE_PAGE_GENERIC,
-                usUsage: HID_USAGE_GENERIC_MOUSE,
-                dwFlags: RIDEV_REMOVE,
-                hwndTarget: std::ptr::null_mut(),
-            };
-            unsafe { RegisterRawInputDevices(&rid, 1, std::mem::size_of::<RAWINPUTDEVICE>() as u32) };
-            unsafe { bIsListeningInput = false; }
-
+			let rid = RAWINPUTDEVICE {
+				usUsagePage: HID_USAGE_PAGE_GENERIC,
+				usUsage: HID_USAGE_GENERIC_MOUSE,
+				dwFlags: RIDEV_REMOVE,
+				hwndTarget: std::ptr::null_mut(),
+			};
+			unsafe { RegisterRawInputDevices(&rid, 1, std::mem::size_of::<RAWINPUTDEVICE>() as u32) };
+			unsafe {
+				bIsListeningInput = false;
+			}
 		}
 		return false;
 	}
 }
 
-unsafe fn ShowTrayMenu(hWnd: HWND) {
+fn ShowTrayMenu(hWnd: HWND) -> LRESULT {
 	let mut pt: POINT = POINT::default();
 	unsafe { GetCursorPos(&mut pt) };
 
-	let hMenu = unsafe { CreatePopupMenu() };
-	unsafe { AppendMenuW(hMenu, MF_STRING, 1, "Exit".encode_utf16().collect::<Vec<u16>>().as_ptr()) };
+	let hMenu: HMENU = unsafe { CreatePopupMenu() };
+	unsafe { AppendMenuW(hMenu, MF_STRING, 1, w!("Exit")) };
 
 	unsafe { SetForegroundWindow(hWnd) }; // Required for menu to disappear correctly
 
@@ -161,6 +186,19 @@ unsafe fn ShowTrayMenu(hWnd: HWND) {
 	unsafe { DestroyMenu(hMenu) };
 
 	if cmd == 1 {
-		unsafe { PostMessageW(hWnd, WM_CLOSE, 0, 0) };
+		return unsafe { PostMessageW(hWnd, WM_CLOSE, 0, 0).try_into().unwrap() };
 	}
+
+	return 0;
+}
+
+
+fn run(percentage: u32) {
+    brightness::blocking::brightness_devices()
+        .try_for_each(|dev| {
+            let dev = dev?;
+            dev.set(percentage)?;
+            Ok::<(), brightness::Error>(())
+        })
+        .unwrap()
 }
