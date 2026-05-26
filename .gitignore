@@ -8,3 +8,4 @@ obj/
 # Added by cargo
 
 /target
+*.pch

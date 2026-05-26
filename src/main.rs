@@ -9,6 +9,7 @@ use windows_sys::{
 		Graphics::Gdi::*,
 		System::LibraryLoader::GetModuleHandleW,
 		UI::{Input::*, Shell::*, WindowsAndMessaging::*},
+
 	},
 	core::*,
 };
@@ -20,6 +21,7 @@ static mut currentBrightness: u32 = 0;
 
 fn main() {
 	let mut hMon: HMONITOR = unsafe { MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST) };
+	unsafe {SetProcessDPIAware()};
 	if hMon.is_null() {
 		panic!("Failed to get monitor handle");
 	}
