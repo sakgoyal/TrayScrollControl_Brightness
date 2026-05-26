@@ -7,9 +7,11 @@ Based on: <https://github.com/sakgoyal/TrayScrollControl>
 ## Compiling from Source
 
 ```powershell
-clang++ -std=c++23 TrayScrollControl.cpp
+clang++ -O3 -std=c++23 .\src\main.cpp -o control.exe
 ```
 
+## Running
+
 ```powershell
-cargo run
+control.exe
 ```
