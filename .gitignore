@@ -1,9 +1,8 @@
 bin/
 obj/
 *.exe
-
+*.pch
 
 # Added by cargo
 
 /target
-*.pch
