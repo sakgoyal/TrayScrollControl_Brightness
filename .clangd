@@ -1,0 +1,18 @@
+CompileFlags:
+  Compiler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/bin/clang++.exe
+  Add:
+    # - -xc
+    - -Wall
+    - -Wpedantic
+    - -Wextra
+    - -std=c++23
+    - -Weverything
+    - -Wno-old-style-cast
+    - -Wno-missing-designated-field-initializers
+    - -fsafe-buffer-usage-suggestions
+    - -Wno-global-constructors
+    - -Wno-exit-time-destructors
+    - -Wno-pre-c23-compat
+    - -Wno-declaration-after-statement
+    - -Wno-c++98-compat
+    - -Wno-missing-prototypes

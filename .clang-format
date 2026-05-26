@@ -1,0 +1,11 @@
+---
+BasedOnStyle: LLVM
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossComments: true
+  AlignCompound: true
+IndentWidth: 4
+UseTab: Always
+TabWidth: 4
+LineEnding: LF
+ColumnLimit: 0
