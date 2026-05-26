@@ -1,5 +1,13 @@
 {
 	"terminal.integrated.defaultProfile.windows": "Developer PowerShell 2022",
 	"python.languageServer": "None",
-	"python.analysis.typeCheckingMode": "off"
+	"python.analysis.typeCheckingMode": "off",
+	"files.exclude": {
+		"**/.git": true,
+		"**/.svn": true,
+		"**/.hg": true,
+		"**/.DS_Store": true,
+		"**/Thumbs.db": true,
+		"**/*.pch": true,
+	}
 }
