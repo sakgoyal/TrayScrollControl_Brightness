@@ -1,6 +1,9 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+
+#pragma comment(linker, "/SUBSYSTEM:windows")
+
 #include "globals.hpp"
 #include "brightness.hpp"
 #include "tray_monitors.hpp"
@@ -78,9 +81,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
 	return 0;
 }
 
-int main() {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	SetProcessDPIAware();
-	const HINSTANCE hInstance = GetModuleHandle(NULL);
 
 	WNDCLASS wc = {};
 	wc.lpfnWndProc   = WndProc;

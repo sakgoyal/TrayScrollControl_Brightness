@@ -7,7 +7,7 @@ Based on: <https://github.com/sakgoyal/TrayScrollControl>
 ## Compiling from Source
 
 ```powershell
-clang++ -O3 -std=c++23 .\src\main.cpp -o control.exe
+clang++ -O3 -std=c++23 -o control.exe .\src\main.cpp .\src\resources.res
 ```
 
 ## Running
