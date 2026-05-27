@@ -147,7 +147,7 @@ inline void InitMonitors() {
 		g_monitors[i].nid.uID			   = g_monitors[i].iconId;
 		g_monitors[i].nid.uFlags		   = NIF_MESSAGE | NIF_ICON | NIF_TIP;
 		g_monitors[i].nid.uCallbackMessage = WM_TRAYICON;
-		g_monitors[i].nid.hIcon			   = LoadIcon(NULL, IDI_APPLICATION);
+		g_monitors[i].nid.hIcon			   = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(1));
 		g_monitors[i].nid.uVersion		   = NOTIFYICON_VERSION_4;
 
 		std::string tooltip = "Brightness: " + std::to_string(g_monitors[i].currentBrightness) + "\n" + g_monitors[i].name;
