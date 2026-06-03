@@ -117,12 +117,18 @@ inline void ShowTrayMenu(HWND hWnd) {
 	POINT pt;
 	GetCursorPos(&pt);
 	HMENU hMenu = CreatePopupMenu();
+	AppendMenu(hMenu, MF_STRING, 2, "Restart");
 	AppendMenu(hMenu, MF_STRING, 1, "Exit");
 	SetForegroundWindow(hWnd);
 	int cmd = TrackPopupMenu(hMenu, TPM_RIGHTBUTTON | TPM_RETURNCMD, pt.x, pt.y, 0, hWnd, NULL);
 	DestroyMenu(hMenu);
 
 	if (cmd == 1) {
+		PostMessage(hWnd, WM_CLOSE, 0, 0);
+	} else if (cmd == 2) {
+		char path[MAX_PATH];
+		GetModuleFileNameA(NULL, path, MAX_PATH);
+		ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWNORMAL);
 		PostMessage(hWnd, WM_CLOSE, 0, 0);
 	}
 }
